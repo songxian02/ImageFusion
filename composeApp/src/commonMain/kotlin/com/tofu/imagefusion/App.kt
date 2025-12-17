@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -30,28 +31,29 @@ import qrgenerator.qrkitpainter.rememberQrKitPainter
 fun App() {
     MaterialTheme {
         var showContent by remember { mutableStateOf(false) }
-        var detectionResult by remember { mutableStateOf<DetectionResult?>(null) }
+        var greenDotResult by remember { mutableStateOf<DetectionResult?>(null) }
+        var grayDotResult by remember { mutableStateOf<DetectionResult?>(null) }
         var isDetecting by remember { mutableStateOf(true) }
         var imageSize by remember { mutableStateOf(IntSize.Zero) }
 
         val qrPainter = rememberQrKitPainter(data = "https://yoursite.com")
+        val referralCode = "SKIBIDI"
         val density = LocalDensity.current
 
-        // Detect green dot on launch
+        // Detect both dots on launch
         LaunchedEffect(Unit) {
             isDetecting = true
-            detectionResult = detectGreenDot("poster1")
-            isDetecting = false
-        }
-
-        LaunchedEffect(Unit) {
-            isDetecting = true
-            detectionResult = detectGreenDot("poster1")
+            greenDotResult = detectQRPosition("poster1")
+            grayDotResult = detectReferralPosition("poster1")
 
             // Debug logging
-            detectionResult?.let {
+            greenDotResult?.let {
                 println("DEBUG: Green dot found at position (${it.position.x}, ${it.position.y}), size: ${it.size}")
             } ?: println("DEBUG: No green dot detected")
+
+            grayDotResult?.let {
+                println("DEBUG: Gray dot found at position (${it.position.x}, ${it.position.y}), size: ${it.size}")
+            } ?: println("DEBUG: No gray dot detected")
 
             isDetecting = false
         }
@@ -67,7 +69,6 @@ fun App() {
                 Text("Click me!")
             }
 
-            // Show loading indicator while detecting
             if (isDetecting) {
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp))
             }
@@ -85,9 +86,9 @@ fun App() {
                     )
 
                     // QR code overlay at detected green dot position
-                    detectionResult?.let { result ->
+                    greenDotResult?.let { result ->
                         if (imageSize != IntSize.Zero) {
-                            val qrSizePx = imageSize.width * 0.25f  // 20% of image width
+                            val qrSizePx = imageSize.width * 0.25f
                             val qrSizeDp = with(density) { qrSizePx.toDp() }
 
                             Image(
@@ -97,9 +98,7 @@ fun App() {
                                     .size(qrSizeDp)
                                     .offset {
                                         IntOffset(
-                                            // Green dot marks the LEFT edge of QR, so don't subtract half width
                                             x = (imageSize.width * result.position.x - qrSizePx / 2).toInt(),
-                                            // Green dot marks the vertical CENTER, so subtract half height
                                             y = (imageSize.height * result.position.y - qrSizePx / 2).toInt()
                                         )
                                     }
@@ -107,10 +106,34 @@ fun App() {
                         }
                     }
 
-                    // Show message if no green dot found
-                    if (detectionResult == null && !isDetecting) {
+                    // Referral code at detected gray dot position
+                    // Referral code at detected magenta dot position
+                    grayDotResult?.let { result ->
+                        if (imageSize != IntSize.Zero) {
+                            var textSize by remember { mutableStateOf(IntSize.Zero) }
+                            val fontSize = imageSize.width * 0.04f
+
+                            Text(
+                                text = referralCode,
+                                color = Color.Black,
+                                fontSize = with(density) { fontSize.toSp() },
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .onSizeChanged { textSize = it }
+                                    .offset {
+                                        IntOffset(
+                                            x = (imageSize.width * result.position.x - textSize.width / 2).toInt(),
+                                            y = (imageSize.height * result.position.y - textSize.height / 2).toInt()
+                                        )
+                                    }
+                            )
+                        }
+                    }
+
+                    // Show message if no dots found
+                    if (greenDotResult == null && grayDotResult == null && !isDetecting) {
                         Text(
-                            text = "No green dot detected",
+                            text = "No dots detected",
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }

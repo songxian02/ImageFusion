@@ -11,4 +11,7 @@ data class DetectionResult(
 )
 
 @OptIn(ExperimentalResourceApi::class)
-expect suspend fun detectGreenDot(resourcePath: String): DetectionResult?
+expect suspend fun detectQRPosition(resourcePath: String): DetectionResult?
+
+@OptIn(ExperimentalResourceApi::class)
+expect suspend fun detectReferralPosition(resourcePath: String): DetectionResult?
